@@ -23,6 +23,8 @@ dir.exe [directory to print] [/s <filename>] [/a{adshrli-}] [/q]
 
 dir will show the date and time last modified, and the name of filesystem objects. For files, the size of the file will also be printed.
 
+|Switch|Description|
+--------------------
 |/s|Prints recursive through all subdirectories. If a filename is supplied then only files who match the filename will be printed. \* and ? can be used as wildcard values in filenames.|
 |/a|Prints files based on their attributes. If no attributes are supplied then all files will be printed. Otherwise, the following letters can be used:
 - a: archive
