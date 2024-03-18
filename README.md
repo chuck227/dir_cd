@@ -26,13 +26,5 @@ dir will show the date and time last modified, and the name of filesystem object
 |Switch|Description|
 |---|---|
 |/s|Prints recursive through all subdirectories. If a filename is supplied then only files who match the filename will be printed. \* and ? can be used as wildcard values in filenames.|
-|/a|Prints files based on their attributes. If no attributes are supplied then all files will be printed. Otherwise, the following letters can be used:
-- a: archive
-- d: directory
-- s: system file
-- h: hidden
-- r: readonly
-- l: Reparse Point
-- i: content not indexed
-If \- is used provided then files without the given attributes will be printed|
+|/a|Prints files based on their attributes. If no attributes are supplied then all files will be printed. Otherwise, the following letters can be used: <ul><li> a: archive</li><li>d: directory</li><li>s: system file</li><li>h: hidden</li><li>r: readonly</li><li>l: Reparse Point</li><li>i: content not indexed</li></ul><br>If \- is used provided then files without the given attributes will be printed|
 |/q|Prints the name of the file owner before printing the 
