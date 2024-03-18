@@ -15,7 +15,7 @@ cd is a fairly simple command which will:
 2. Change the current directory to the user supplied directory
 3. Print the new current directory
 
-The syntax for this command is cd.exe [New Path]
+The syntax for this command is: <br><p align=center>cd.exe [New Path]</p>
 
 ## dir
 dir is used to print the contents of a directory it has the following syntax:<br><p align=center>dir.exe [directory] [/s <filename>] [/a{adshrli-}] [/q]</p>dir will show the date and time last modified, and the name of filesystem objects. For files, the size of the file will also be printed.
