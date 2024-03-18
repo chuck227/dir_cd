@@ -1,32 +1,31 @@
 #include "dir.h"
-#include <comdef.h>
 
 int main() {
 	TCHAR dirToPrint[MAXPATH] = { 0 }, newDir[MAXPATH] = {0};
 	WCHAR* cli = GetCommandLine();
 
-	DWORD singleSearch = 1, i = 0, args = MAXDWORD; // MAXDWORD will match all in a filter
-
-	args = args ^ FILE_ATTRIBUTE_SYSTEM; // Remove system and hidden by default
-	args = args ^ FILE_ATTRIBUTE_HIDDEN;
+	DWORD singleSearch = 1, i = 0, args = FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_HIDDEN; // MAXDWORD will match all in a filter
 
 	WCHAR searchFor[MAXPATH] = { 0 };
 
-	void (*printingMethod)(LPWIN32_FIND_DATAW, WCHAR*) = &defaultPrintFile;
+	void (*printingMethod)(LPWIN32_FIND_DATAW, WCHAR*) = &defaultPrintFile; // Set printing file to default printing method
+	DWORD(*comp)(LPWIN32_FIND_DATAW, DWORD) = &doesNotHaveAttribute; // Set default attribute checking to does not have so we can ignore system and hidden objects
 
 	//Find first attribute
 	while (NULL != *cli && *cli != L' ') cli++;
 
-	while (NULL != *cli) {
+	while (NULL != *cli) { // Go till we have no more attributes
 		while (*cli == ' ') cli++; // Remove the current spaces
 		if (NULL == *cli) break; // Ensure trailing spaces don't get us in trouble
 
-		if (*cli == L'/') { 
+		if (*cli == L'/') { // If the next item starts with a / treat it as a switch
 			cli++;
 			switch (*cli) {
 			case L'a':
 				cli++;
-				args = parseAttributeArg(cli);
+				if (parseAttributeArg(cli, &args)) {
+					comp = &hasAttribute;
+				}
 				break;
 			case L's':
 				singleSearch = 0; // Tell control to go through sub directories
@@ -40,7 +39,7 @@ int main() {
 				break;
 			}
 		}
-		else {
+		else { // Otherwise it is a directory to check
 			i = 0;
 			while (*cli != ' ' && NULL != *cli) { newDir[i] = *cli; cli++; i++; }
 			SetCurrentDirectoryW(newDir);
@@ -48,15 +47,15 @@ int main() {
 		while (NULL != *cli && *cli != L' ') cli++; // Get to next point
 	}
 	
-	GetCurrentDirectory(MAXPATH, dirToPrint);
+	GetCurrentDirectory(MAXPATH, dirToPrint); // Set the starting directory
 
-	if(singleSearch) printFilesByAttributes(dirToPrint, args, printingMethod);
-	else searchPrinting(dirToPrint, searchFor, args, printingMethod);
+	if(singleSearch) printFilesByAttributes(dirToPrint, args, printingMethod, comp);
+	else searchPrinting(dirToPrint, searchFor, args, printingMethod, comp);
 }
 
-void searchPrinting (TCHAR* startingDir, const WCHAR* filename, DWORD attrs, void (*printingMethod)(LPWIN32_FIND_DATAW, WCHAR*)) {
+void searchPrinting (TCHAR* startingDir, const WCHAR* filename, DWORD attrs, void (*printingMethod)(LPWIN32_FIND_DATAW, WCHAR*), DWORD(*comparison)(LPWIN32_FIND_DATAW, DWORD attr)) {
 	if (wcslen(filename) == 0) filename = L"*";
-	DWORD lenOfStart = wcslen(startingDir) + 2, current = 0, foundMatching = 0;
+	size_t lenOfStart = wcslen(startingDir) + 2, current = 0, foundMatching = 0;
 	TCHAR* baseDir = (TCHAR*)malloc(sizeof(TCHAR) * lenOfStart);
 	HANDLE searcher;
 	TCHAR nextDir[MAXPATH];
@@ -70,7 +69,7 @@ void searchPrinting (TCHAR* startingDir, const WCHAR* filename, DWORD attrs, voi
 		
 	searcher = FindFirstFileW(startingDir, data);
 
-	if (data->dwFileAttributes & attrs && regexCompareFilenames(data->cFileName, filename)) {
+	if (comparison(data, attrs) && regexCompareFilenames(data->cFileName, filename)) {
 		if (!foundMatching) {
 			foundMatching = 1;
 			printf("\n");
@@ -79,7 +78,7 @@ void searchPrinting (TCHAR* startingDir, const WCHAR* filename, DWORD attrs, voi
 		printingMethod(data, baseDir);
 	}
 	while (FindNextFile(searcher, data)) {
-		if (data->dwFileAttributes & attrs && regexCompareFilenames(data->cFileName, filename)) {
+		if (comparison(data, attrs) && regexCompareFilenames(data->cFileName, filename)) {
 			if (!foundMatching) {
 				foundMatching = 1;
 				printf("\n");
@@ -96,7 +95,7 @@ void searchPrinting (TCHAR* startingDir, const WCHAR* filename, DWORD attrs, voi
 		if (data->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) { 
 			wcscpy_s(nextDir, MAXPATH, baseDir);
 			wcscat_s(nextDir, MAXPATH, data->cFileName);
-			searchPrinting(nextDir, filename, attrs, printingMethod); 
+			searchPrinting(nextDir, filename, attrs, printingMethod, comparison); 
 		}
 	}
 	free(data);
@@ -107,28 +106,30 @@ DWORD regexCompareFilenames(WCHAR* filename, const WCHAR* regex) {
 	else if (NULL == *regex && NULL == *filename) return 1;
 
 	while (NULL != *filename) {
-		if (*regex != '*' && *regex != '?') {
-			if (*filename != *regex) return 0;
+		if (*regex != '*' && *regex != '?') { 
+			if (*filename != *regex) return 0; // If the regex char is not wild then return false if the filename does not match
 			regex++;
 		}
-		else if (*regex == '*') {
-			if (*(regex+1) == *filename && regexCompareFilenames(filename+1, regex+2)) return 1;
+		else if (*regex == '*') { // If the char is * then attempt various consumption methods before continuing (potentially without consuming regex)
+			if (*(regex + 1) == *filename && regexCompareFilenames(filename + 1, regex + 2)) return 1; // Attempt to consume current wild and next character if it matches next filename
+			else if ((*(regex + 1) == '?' || *(regex + 1) == '*') && regexCompareFilenames(filename + 1, regex + 2)) return 1; // Attempt to consume current wild and next
+			else if (*(regex + 1) == '*' && regexCompareFilenames(filename + 1, regex + 1)) return 1; // Consume current * but not the next
 		}
-		else {
+		else { // If char is ? then consume it and continue
 			regex++;
 		}
 		filename++;
-		if (NULL == *regex && NULL != *filename) return 0;
+		if (NULL == *regex && NULL != *filename) return 0; // If regex is empty but filename is not then False
 	}
-	while (*regex != NULL) {
-		if (*regex != '*') return 0;
+	while (*regex != NULL) { // Ensure remaining chars are * since they match the empty string
+		if (*regex != '*') return 0; // ? must match at least one char, but * can match the empty string
 		regex++;
 	}
 	return 1;
 }
 
-DWORD parseAttributeArg(WCHAR* attributes) {
-	DWORD attrs = 0;
+DWORD parseAttributeArg(WCHAR* attributes, DWORD* returnAttrs) {
+	DWORD attrs = 0, val = 1;
 	int i = 0;
 	while(attributes[i] != L' ' && NULL != attributes[i]) {
 		switch (attributes[i]) {
@@ -153,17 +154,34 @@ DWORD parseAttributeArg(WCHAR* attributes) {
 		case L'i':
 			attrs = attrs | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED;
 			break;
+		case L'-': // If - is given then we want anything without the supplied attributes
+			val = 0;
 		}
 		i++;
 	}
 	if (!attrs) attrs = MAXDWORD;
-	return attrs;
+	*returnAttrs = attrs;
+	return val;
+}
+
+DWORD hasAttribute(LPWIN32_FIND_DATAW data, DWORD attrs) {
+	return data->dwFileAttributes & attrs;
+}
+
+DWORD doesNotHaveAttribute(LPWIN32_FIND_DATAW data, DWORD attrs) {
+	DWORD dataAttr = data->dwFileAttributes;
+	while (dataAttr && attrs) {
+		if (dataAttr % 2 == 1 && attrs % 2 == 1) return 0;
+		dataAttr = dataAttr >> 1;
+		attrs = attrs >> 1;
+	}
+	return 1;
 }
 
 void defaultPrintFile(LPWIN32_FIND_DATAW fileInfo, WCHAR* baseDir) {
 	LPSYSTEMTIME displayable = (LPSYSTEMTIME)malloc(sizeof(SYSTEMTIME));
 	if (NULL == displayable) return;
-	FileTimeToSystemTime(&(fileInfo->ftLastAccessTime), displayable);
+	FileTimeToSystemTime(&(fileInfo->ftLastWriteTime), displayable);
 
 	int isDir = fileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY;
 
@@ -206,11 +224,13 @@ void printFileOwnership(LPWIN32_FIND_DATAW fileInfo, WCHAR* baseDir) {
 	char name[USERMAX], domain[USERMAX];
 	WCHAR fullPath[MAXPATH] = { 0 };
 	DWORD size = USERMAX, size2 = USERMAX;
+	LPFILETIME localtime = (LPFILETIME)malloc(sizeof(FILETIME));
 	LPSYSTEMTIME displayable = (LPSYSTEMTIME)malloc(sizeof(SYSTEMTIME));
 	SID_NAME_USE ignored;
 
 	if (NULL == displayable) return;
-	FileTimeToSystemTime(&(fileInfo->ftLastAccessTime), displayable);
+	FileTimeToLocalFileTime(&(fileInfo->ftLastWriteTime), localtime);
+	FileTimeToSystemTime(localtime, displayable);
 
 	int isDir = fileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY;
 	
@@ -253,12 +273,12 @@ void printFileOwnership(LPWIN32_FIND_DATAW fileInfo, WCHAR* baseDir) {
 	free(displayable);
 }
 
-void printFilesByAttributes(TCHAR* directory, DWORD attrs, void (*printingMethod)(LPWIN32_FIND_DATAW, WCHAR*)) {
+void printFilesByAttributes(TCHAR* directory, DWORD attrs, void (*printingMethod)(LPWIN32_FIND_DATAW, WCHAR*), DWORD (*comparison)(LPWIN32_FIND_DATAW, DWORD attr)) {
 	/*
 		NOTE: dir /a is an and function meaning we if ask for /a:hd (hidden and directory) we print all directories which are also hidden
 		not all directories and all hidden objects
 	*/
-	DWORD lenOfStart = wcslen(directory) + 2;
+	size_t lenOfStart = wcslen(directory) + 2;
 	TCHAR* baseDir = (TCHAR*)malloc(sizeof(TCHAR) * lenOfStart);
 	if (NULL == baseDir) return;
 
@@ -270,9 +290,9 @@ void printFilesByAttributes(TCHAR* directory, DWORD attrs, void (*printingMethod
 	if (NULL == data) return;
 
 	HANDLE searcher = FindFirstFileW(directory, data);
-	if ((data->dwFileAttributes & attrs)) printingMethod(data, baseDir);
+	if (comparison(data, attrs)) printingMethod(data, baseDir);
 	while (FindNextFile(searcher, data)) {
-		if ((data->dwFileAttributes & attrs)) printingMethod(data, baseDir);
+		if (comparison(data, attrs)) printingMethod(data, baseDir);
 	}
 
 	free(data);

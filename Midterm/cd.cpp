@@ -1,14 +1,16 @@
-#pragma once
 #include "cd.h"
 
 int main() {
 	TCHAR curDir[MAXPATH];
 	GetCurrentDirectory(MAXPATH, curDir);
-	printf("%ls\n", curDir);
+	printf("Current Directory %ls\n\n", curDir);
 	WCHAR* cli = GetCommandLine();
 	while (NULL != *cli && *cli != L' ') cli++;
 	while (*cli == ' ') cli++; // Remove any extra leading spaces
-	SetCurrentDirectoryW(cli);
+	if(!SetCurrentDirectoryW(cli)) {
+		printf("Invalid path given exitting...\n");
+		return -1;
+	}
 	GetCurrentDirectory(MAXPATH, curDir);
-	printf("%ls\n", curDir);
+	printf("New Directory %ls\n", curDir);
 }
