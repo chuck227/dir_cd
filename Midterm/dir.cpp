@@ -42,7 +42,10 @@ int main() {
 		else { // Otherwise it is a directory to check
 			i = 0;
 			while (*cli != ' ' && NULL != *cli) { newDir[i] = *cli; cli++; i++; }
-			SetCurrentDirectoryW(newDir);
+			if (!SetCurrentDirectoryW(newDir)) {
+				printf("Invalid starting directory provided... exiting\n");
+				return -1;
+			}
 		}
 		while (NULL != *cli && *cli != L' ') cli++; // Get to next point
 	}
