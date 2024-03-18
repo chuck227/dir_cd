@@ -1,0 +1,15 @@
+<Sysmon schemaversion="4.50">
+	<HashAlgorithms>sha256</HashAlgorithms>
+	<CheckRevocation/>
+	<EventFiltering>
+		<RuleGroup name="Midterm Process Created" groupRelation="or">
+			<ProcessCreate onmatch="include">
+				<Hashes condition="contains">7d44803955405555c014f7e6948cdacd3f88beb507fdbed4b3385d7ef8876fd3</Hashes>
+				<Hashes condition="contains">d67c995679bf80ddc356dca1b999cf3a7a5a1c1f7843aad691bab5fb6ee651c0</Hashes>
+				<CommandLine condition="contains">/s</CommandLine>
+				<CommandLine condition="contains">/a</CommandLine>
+				<CommandLine condition="contains">/q</CommandLine>
+			</ProcessCreate>
+		</RuleGroup>
+	</EventFiltering>
+</Sysmon>
