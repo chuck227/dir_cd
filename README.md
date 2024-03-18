@@ -18,7 +18,7 @@ cd is a fairly simple command which will:
 The syntax for this command is cd.exe [New Path]
 
 ## dir
-dir is used to print the contents of a directory it has the following syntax:<br><p align=center>dir.exe [directory] [/s <filename>] [/a{adshrli-}] [/q]</p><br>dir will show the date and time last modified, and the name of filesystem objects. For files, the size of the file will also be printed.
+dir is used to print the contents of a directory it has the following syntax:<br><p align=center>dir.exe [directory] [/s <filename>] [/a{adshrli-}] [/q]</p>dir will show the date and time last modified, and the name of filesystem objects. For files, the size of the file will also be printed.
 
 |Switch|Description|
 |---|---|
