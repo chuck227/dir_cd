@@ -1,4 +1,7 @@
 #include "dir.h"
+static int test() {
+	return 0;
+}
 
 int main() {
 	TCHAR dirToPrint[MAXPATH] = { 0 }, newDir[MAXPATH] = {0};
@@ -15,7 +18,8 @@ int main() {
 	while (NULL != *cli && *cli != L' ') cli++;
 
 	while (NULL != *cli) { // Go till we have no more attributes
-		while (*cli == ' ') cli++; // Remove the current spaces
+		while (*cli == L' ') cli++; // Remove the current spaces
+
 		if (NULL == *cli) break; // Ensure trailing spaces don't get us in trouble
 
 		if (*cli == L'/') { // If the next item starts with a / treat it as a switch
@@ -26,16 +30,19 @@ int main() {
 				if (parseAttributeArg(cli, &args)) {
 					comp = &hasAttribute;
 				}
+				while (NULL != *cli && *cli != L' ') cli++; // Get to next 
 				break;
 			case L's':
 				singleSearch = 0; // Tell control to go through sub directories
 				cli++;
+				if (NULL == *cli) break;
 				cli++;
 				i = 0;
-				while (NULL != *cli  && *cli != L' ' && *cli != '\\' ) { searchFor[i] = *cli; cli++; i++; }
+				while (NULL != *cli  && *cli != L' ' && *cli != L'/' ) { searchFor[i] = *cli; cli++; i++; }
 				break;
 			case L'q':
 				printingMethod = &printFileOwnership;
+				cli++;
 				break;
 			}
 		}
@@ -44,10 +51,10 @@ int main() {
 			while (*cli != ' ' && NULL != *cli) { newDir[i] = *cli; cli++; i++; }
 			if (!SetCurrentDirectoryW(newDir)) {
 				printf("Invalid starting directory provided... exiting\n");
+				printf("%ls", cli--);
 				return -1;
 			}
 		}
-		while (NULL != *cli && *cli != L' ') cli++; // Get to next point
 	}
 	
 	GetCurrentDirectory(MAXPATH, dirToPrint); // Set the starting directory
@@ -66,7 +73,11 @@ void searchPrinting (TCHAR* startingDir, const WCHAR* filename, DWORD attrs, voi
 	if (NULL == baseDir) return;
 
 	wcscpy_s(baseDir, lenOfStart, startingDir);
-	wcscat_s(startingDir, MAXPATH, L"\\*");
+	wcscat_s(baseDir, lenOfStart, L"\\");
+
+	printf("%ls\n", baseDir);
+	wcscat_s(startingDir, MAXPATH, L"\\");
+	wcscat_s(startingDir, MAXPATH, filename);
 	data = (LPWIN32_FIND_DATAW)malloc(sizeof(WIN32_FIND_DATAW));
 	if (NULL == data) return;
 		
@@ -91,7 +102,6 @@ void searchPrinting (TCHAR* startingDir, const WCHAR* filename, DWORD attrs, voi
 		}
 	}
 
-	wcscat_s(baseDir, lenOfStart, L"\\");
 	searcher = FindFirstFileW(startingDir, data);
 	FindNextFile(searcher, data);
 	while (FindNextFile(searcher, data)) {
@@ -231,7 +241,7 @@ void printFileOwnership(LPWIN32_FIND_DATAW fileInfo, WCHAR* baseDir) {
 	LPSYSTEMTIME displayable = (LPSYSTEMTIME)malloc(sizeof(SYSTEMTIME));
 	SID_NAME_USE ignored;
 
-	if (NULL == displayable) return;
+	if (NULL == displayable || NULL == localtime) return;
 	FileTimeToLocalFileTime(&(fileInfo->ftLastWriteTime), localtime);
 	FileTimeToSystemTime(localtime, displayable);
 
