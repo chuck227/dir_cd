@@ -65,8 +65,8 @@ int main() {
 
 void searchPrinting (TCHAR* startingDir, const WCHAR* filename, DWORD attrs, void (*printingMethod)(LPWIN32_FIND_DATAW, WCHAR*), DWORD(*comparison)(LPWIN32_FIND_DATAW, DWORD attr)) {
 	if (wcslen(filename) == 0) filename = L"*";
-	size_t lenOfStart = wcslen(startingDir) + 2, current = 0, foundMatching = 0;
-	TCHAR* baseDir = (TCHAR*)malloc(sizeof(TCHAR) * lenOfStart);
+	size_t lenOfStart = wcslen(startingDir) + 3, current = 0, foundMatching = 0;
+	TCHAR* baseDir = (TCHAR*)malloc(sizeof(TCHAR) * lenOfStart), printing[MAXPATH];
 	HANDLE searcher;
 	TCHAR nextDir[MAXPATH];
 	LPWIN32_FIND_DATAW data;
@@ -75,7 +75,8 @@ void searchPrinting (TCHAR* startingDir, const WCHAR* filename, DWORD attrs, voi
 	wcscpy_s(baseDir, lenOfStart, startingDir);
 	wcscat_s(baseDir, lenOfStart, L"\\");
 
-	printf("%ls\n", baseDir);
+	wcscpy_s(printing, MAXPATH, startingDir);
+
 	wcscat_s(startingDir, MAXPATH, L"\\");
 	wcscat_s(startingDir, MAXPATH, filename);
 	data = (LPWIN32_FIND_DATAW)malloc(sizeof(WIN32_FIND_DATAW));
@@ -87,7 +88,7 @@ void searchPrinting (TCHAR* startingDir, const WCHAR* filename, DWORD attrs, voi
 		if (!foundMatching) {
 			foundMatching = 1;
 			printf("\n");
-			printf("Directory of %ls\n\n", baseDir); // Need to make sure we only print if something is found
+			printf("Directory of %ls\n\n", printing); // Need to make sure we only print if something is found
 		}
 		printingMethod(data, baseDir);
 	}
@@ -96,17 +97,19 @@ void searchPrinting (TCHAR* startingDir, const WCHAR* filename, DWORD attrs, voi
 			if (!foundMatching) {
 				foundMatching = 1;
 				printf("\n");
-				printf("Directory of %ls\n\n", baseDir); // Need to make sure we only print if something is found
+				printf("Directory of %ls\n\n", printing); // Need to make sure we only print if something is found
 			}
 			printingMethod(data, baseDir);
 		}
 	}
-
-	searcher = FindFirstFileW(startingDir, data);
+		
+	wcscat_s(baseDir, lenOfStart, L"*");
+	searcher = FindFirstFileW(baseDir, data);
 	FindNextFile(searcher, data);
 	while (FindNextFile(searcher, data)) {
 		if (data->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) { 
 			wcscpy_s(nextDir, MAXPATH, baseDir);
+			nextDir[wcslen(nextDir) - 1] = L'\0';
 			wcscat_s(nextDir, MAXPATH, data->cFileName);
 			searchPrinting(nextDir, filename, attrs, printingMethod, comparison); 
 		}
