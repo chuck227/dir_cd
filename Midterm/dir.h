@@ -36,3 +36,6 @@ DWORD parseAttributeArg(WCHAR* attributes, DWORD* returnAttrs);
 
 // Helper Functions
 DWORD regexCompareFilenames(WCHAR* filename, const WCHAR* regex);
+
+// Other stuff
+void printHelp();

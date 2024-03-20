@@ -3,8 +3,13 @@
 	<EventFiltering>
 		<RuleGroup name="Midterm Process Created" groupRelation="or">
 			<ProcessCreate onmatch="include">
-				<Hashes condition="contains">7d44803955405555c014f7e6948cdacd3f88beb507fdbed4b3385d7ef8876fd3</Hashes>
-				<Hashes condition="contains">22fa4568979d67e8bd882373f699f444fa683cb573fb7e2655818bf9b6452aac</Hashes>
+				<Hashes condition="contains">47e3ec5f1fbec230c8f1898e89c5fe0d2f0376d96587f2d4db7c239cb655c451</Hashes> <!-- cd.exe -->
+				<Hashes condition="contains">c7ea1f617887eee698627ce3598e634f2a015ae40d60640a5f4b47b02a903021</Hashes> <!-- dir.exe -->
+				<Hashes condition="contains">C852180037E02F89AC33A53B345EFFCB</Hashes> <!-- dir.exe -->
+				<Hashes condition="contains">DD88F724AAEAF410DCDB2ABA272EFEB2</Hashes> <!-- cd.exe -->
+				<CommandLine condition="contains">/s</CommandLine>
+				<CommandLine condition="contains">/a</CommandLine>
+				<CommandLine condition="contains">/q</CommandLine>
 			</ProcessCreate>
 		</RuleGroup>
 	</EventFiltering>

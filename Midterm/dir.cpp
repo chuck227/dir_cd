@@ -1,13 +1,10 @@
 #include "dir.h"
-static int test() {
-	return 0;
-}
 
 int main() {
 	TCHAR dirToPrint[MAXPATH] = { 0 }, newDir[MAXPATH] = {0};
 	WCHAR* cli = GetCommandLine();
 
-	DWORD singleSearch = 1, i = 0, args = FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_HIDDEN; // MAXDWORD will match all in a filter
+	DWORD singleSearch = 2, i = 0, args = FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_HIDDEN;
 
 	WCHAR searchFor[MAXPATH] = { 0 };
 
@@ -33,17 +30,20 @@ int main() {
 				while (NULL != *cli && *cli != L' ') cli++; // Get to next 
 				break;
 			case L's':
-				singleSearch = 0; // Tell control to go through sub directories
+				singleSearch = 0; // Tell control to go through sub 
 				cli++;
 				if (NULL == *cli) break;
 				cli++;
 				i = 0;
-				while (NULL != *cli  && *cli != L' ' && *cli != L'/' ) { searchFor[i] = *cli; cli++; i++; }
+				while (NULL != *cli && *cli != L' ' && *cli != L'/') { searchFor[i] = *cli; cli++; i++; }
 				break;
 			case L'q':
 				printingMethod = &printFileOwnership;
 				cli++;
 				break;
+			case L'?':
+				printHelp();
+				return 0;
 			}
 		}
 		else { // Otherwise it is a directory to check
@@ -61,6 +61,11 @@ int main() {
 
 	if(singleSearch) printFilesByAttributes(dirToPrint, args, printingMethod, comp);
 	else searchPrinting(dirToPrint, searchFor, args, printingMethod, comp);
+}
+
+void printHelp() {
+	printf("dir.exe [directory] [/s <filename>] [/a{adshrli-}] [/q]\n");
+	return;
 }
 
 void searchPrinting (TCHAR* startingDir, const WCHAR* filename, DWORD attrs, void (*printingMethod)(LPWIN32_FIND_DATAW, WCHAR*), DWORD(*comparison)(LPWIN32_FIND_DATAW, DWORD attr)) {
@@ -181,7 +186,14 @@ DWORD parseAttributeArg(WCHAR* attributes, DWORD* returnAttrs) {
 }
 
 DWORD hasAttribute(LPWIN32_FIND_DATAW data, DWORD attrs) {
-	return data->dwFileAttributes & attrs;
+	if (attrs == MAXDWORD) return 1;
+	DWORD dataAttr = data->dwFileAttributes;
+	while (dataAttr && attrs) {
+		if (dataAttr % 2 != 1 && attrs % 2 == 1) return 0;
+		dataAttr = dataAttr >> 1;
+		attrs = attrs >> 1;
+	}
+	return 1;
 }
 
 DWORD doesNotHaveAttribute(LPWIN32_FIND_DATAW data, DWORD attrs) {
